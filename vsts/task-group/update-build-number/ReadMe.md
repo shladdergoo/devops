@@ -20,4 +20,6 @@ The task group has 3 parameters:
 - versionElement: The path to the xml node whose value contains the major/minor version. Defaults to Project.PropertyGroup.AssemblyVersion
 - buildRevision: The build variable used to store the current revision number for the build defintion. Defaults to $(buildRevision). If a different variable is used then additional changes will be required in the inline scripts for the 2 tasks.
 
+The build definition should set 'Allow Scripts to Access OAuth Token'.
+
 Updating the build number requires the build service account to have Edit Build Definition permissions for the current build definition.
