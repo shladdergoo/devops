@@ -1,0 +1,124 @@
+{
+    "tasks": [
+        {
+            "displayName": "Read and Set Build Number",
+            "alwaysRun": false,
+            "continueOnError": false,
+            "condition": "succeeded()",
+            "enabled": true,
+            "timeoutInMinutes": 0,
+            "inputs": {
+                "targetType": "inline",
+                "filePath": "",
+                "arguments": "",
+                "script": "Write-Host \"Reading project version\"\n\n$baseVersion=([xml](Get-Content -Path $(versionProjectPath))).$(versionElement)\n\nWrite-Host \"Got version\"$baseVersion\n\nWrite-Host \"##vso[build.updatebuildnumber]$baseVersion.$(buildRevision)\"",
+                "errorActionPreference": "stop",
+                "failOnStderr": "false",
+                "ignoreLASTEXITCODE": "false",
+                "workingDirectory": ""
+            },
+            "task": {
+                "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+                "versionSpec": "2.*",
+                "definitionType": "task"
+            }
+        },
+        {
+            "displayName": "Increment Revision",
+            "alwaysRun": false,
+            "continueOnError": false,
+            "enabled": true,
+            "timeoutInMinutes": 0,
+            "inputs": {
+                "targetType": "inline",
+                "filePath": "",
+                "arguments": "",
+                "script": "$revisionPropertyName = \"buildRevision\"\n\n$uriRoot = $env:SYSTEM_TEAMFOUNDATIONSERVERURI\n$projectName = $env:SYSTEM_TEAMPROJECT\n$buildDefName = $env:BUILD_DEFINITIONNAME\n\n$apiVersionString = \"api-version=4.1-preview\"\n$buildDefsUri = \"$uriRoot$projectName/_apis/build/definitions?$apiVersionString\"\n$header = @{Authorization = \"Bearer $env:SYSTEM_ACCESSTOKEN\"}\n\n$buildDefs = Invoke-RestMethod -Uri $buildDefsUri -Method Get -ContentType \"application/json\" -Headers $header -Verbose -Debug\n \n$buildDef = $buildDefs.value | Where-Object { $_.name -eq $buildDefName }\n\nif ($buildDef -eq $null)\n{\n    Write-Error \"Unable to find a build definition for '$buildDefName'. Check the config values and try again.\" -ErrorAction Stop\n}\n\n$buildDefObj = Invoke-RestMethod -Uri ($buildDef.Url + \"?\" + $apiVersionString) -Method Get -ContentType \"application/json\" -Headers $header -Verbose -Debug\n\nif ($buildDefObj.variables.$revisionPropertyName -eq $null)\n{\n    Write-Error \"Unable to find a variable called '$revisionPropertyName' in Build Definition '$buildDefName'. Please check the config and try again.\" -ErrorAction Stop\n}\n\n[int]$counter = [convert]::ToInt32($buildDefObj.variables.$revisionPropertyName.Value, 10)\n$updatedCounter = $counter + 1\nWrite-Host \"Revision number for '$buildDefName' is $counter. Will be updating to $updatedCounter\"\n\n$buildDefObj.variables.$revisionPropertyName.Value = $updatedCounter.ToString()\n$buildDefJson = $buildDefObj | ConvertTo-Json -Depth 100\n\nInvoke-RestMethod -Uri ($buildDefObj.Url + \"&\" + $apiVersionString) -Method Put -ContentType \"application/json\" -Headers $header -Body $buildDefJson -Verbose -Debug",
+                "errorActionPreference": "stop",
+                "failOnStderr": "false",
+                "ignoreLASTEXITCODE": "false",
+                "workingDirectory": ""
+            },
+            "task": {
+                "id": "e213ff0f-5d5c-4791-802d-52ea3e7be1f1",
+                "versionSpec": "2.*",
+                "definitionType": "task"
+            }
+        }
+    ],
+    "runsOn": [
+        "Agent"
+    ],
+    "revision": 13,
+    "createdBy": {
+        "id": "fd92548c-fa18-46fa-89b6-fa606eecba5e",
+        "uniqueName": "shladdergoo@hotmail.com",
+        "displayName": "James Fox"
+    },
+    "createdOn": "2018-02-23T08:57:52.150Z",
+    "modifiedBy": {
+        "id": "fd92548c-fa18-46fa-89b6-fa606eecba5e",
+        "uniqueName": "shladdergoo@hotmail.com",
+        "displayName": "James Fox"
+    },
+    "modifiedOn": "2018-02-27T07:18:19.180Z",
+    "id": "f4627607-250a-4150-aaf8-1f8260029ff1",
+    "name": "Update Build Number",
+    "version": {
+        "major": 1,
+        "minor": 0,
+        "patch": 0,
+        "isTest": false
+    },
+    "iconUrl": "https://cdn.vsassets.io/v/20180226T150905/_content/icon-meta-task.png",
+    "friendlyName": "Update Build Number",
+    "description": "Reads a major/minor version from a csproj file, and a revision number from a build definition variable, updates the build number for the current build with these values and then increments the revision number.",
+    "category": "Build",
+    "definitionType": "metaTask",
+    "author": "James Fox",
+    "demands": [],
+    "groups": [],
+    "inputs": [
+        {
+            "aliases": [],
+            "options": {},
+            "properties": {},
+            "name": "versionElement",
+            "label": "versionElement",
+            "defaultValue": "Project.PropertyGroup.AssemblyVersion",
+            "required": true,
+            "type": "string",
+            "helpMarkDown": "The path to the xml node whose value contains the major/minor version",
+            "groupName": ""
+        },
+        {
+            "aliases": [],
+            "options": {},
+            "properties": {},
+            "name": "versionProjectPath",
+            "label": "versionProjectPath",
+            "defaultValue": "",
+            "required": true,
+            "type": "string",
+            "helpMarkDown": "The filepath to the csproj (or other XML) file containing a major/minor version for use in the generated build number. E.g. $(System.DefaultWorkingDirectory)/src/Hcc.DevOps.SamplePackage/Hcc.DevOps.SamplePackage.csproj",
+            "groupName": ""
+        },
+        {
+            "aliases": [],
+            "options": {},
+            "properties": {},
+            "name": "buildRevision",
+            "label": "buildRevision",
+            "defaultValue": "$(buildRevision)",
+            "required": true,
+            "type": "string",
+            "helpMarkDown": "The build variable used to store the current revision number for the build defintion",
+            "groupName": ""
+        }
+    ],
+    "satisfies": [],
+    "sourceDefinitions": [],
+    "dataSourceBindings": [],
+    "instanceNameFormat": "Task group: Update Build Number",
+    "execution": {}
+}
